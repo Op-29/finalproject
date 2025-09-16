@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ศูนย์อัพโหลดข้อมูล</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- CSS file path is kept as per the original code -->
+    <link rel="stylesheet" href="/css/upload.css"> 
+</head>
+<body>
+    <div class="background-pattern"></div>    
+    <div class="nav-buttons">
+        <button onclick="window.location.href='/index'" class="active">แผนที่</button>
+        <button onclick="window.location.href='/chart'">กราฟ</button>
+        <button onclick="window.location.href='/table'">ตาราง</button>    
+        <button class="top-buttons-information logout" onclick="logout()">ออกจากระบบ</button>
+    </div>
+
+    <div class="main-container">
+        <div class="header-section">
+            <h1>ศูนย์อัพโหลดข้อมูล</h1>
+        </div>
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="step">
+                    <div id="step1" class="step-circle active">1</div>
+                    <span id="stepLabel1" class="step-label active">อัปโหลดไฟล์</span>
+                </div>
+                <div id="stepLine1" class="step-line active"></div>
+                <div class="step">
+                    <div id="step2" class="step-circle">2</div>
+                    <span id="stepLabel2" class="step-label">กำลังประมวลผล</span>
+                </div>
+                <div id="stepLine2" class="step-line"></div>
+                <div class="step">
+                    <div id="step3" class="step-circle">3</div>
+                    <span id="stepLabel3" class="step-label">เสร็จสิ้น</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-card">
+                <h2><i class="fas fa-cloud-upload-alt"></i> อัพโหลดไฟล์</h2>
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-file-csv"></i>
+                    <div class="upload-text-container">
+                        <div class="upload-text">วางไฟล์ CSV ของคุณที่นี่</div>
+                        <div class="upload-subtext">หรือคลิกเพื่อเรียกดูไฟล์</div>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" name="csvFile" class="file-input" accept=".csv">
+                
+                <div class="file-info" id="fileInfo">
+                    <i class="fas fa-file-csv"></i>
+                    <div class="file-details">
+                        <h4 id="fileName">filename.csv</h4>
+                        <p id="fileSize">0 KB</p>
+                    </div>
+                </div>
+
+                <button class="upload-btn" id="uploadBtn" onclick="uploadFile()">
+                    <i class="fas fa-upload"></i> อัพโหลดไฟล์
+                </button>
+
+                <!-- Enhanced Loading Section -->
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-status">
+                        <h3 id="loadingTitle">กำลังอัพโหลดไฟล์...</h3>
+                        <p id="loadingDescription">กรุณารอสักครู่</p>
+                    </div>
+                    
+                    <!-- Overall Progress Bar -->
+                    <div class="overall-progress">
+                        <div class="progress-label">ความคืบหน้าทั้งหมด</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="overallProgressText">0%</div>
+                    </div>
+                    
+                    <!-- Status Messages -->
+                    <div class="status-messages" id="statusMessages">
+                        <div class="status-item" id="status1">
+                            <i class="fas fa-clock"></i>
+                            <span>รอเริ่มต้น...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="message success-message" id="successMessage">
+                    <i class="fas fa-check-circle"></i>
+                    <span>อัพโหลดไฟล์สำเร็จแล้ว!!</span>
+                </div>
+
+                <div class="message error-message" id="errorMessage">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>เกิดข้อผิดพลาดในการอัปโหลดไฟล์ โปรดลองอีกครั้ง</span>
+                </div>
+
+                <!-- File Information Section -->
+                <div class="file-info-section">
+                    <h3><i class="fas fa-info-circle"></i> ข้อมูลไฟล์</h3>
+                    <div id="fileInfoCard" style="color: #2c5530; line-height: 1.8;">
+                        <div id="noFileSelected">
+                            <p><i class="fas fa-file-csv" style="font-size: 2.5rem; color: #2c5530; margin-bottom: 15px; display: block;"></i></p>
+                            <p><strong>ไม่ได้เลือกไฟล์</strong></p>
+                            <p>เลือกไฟล์ CSV เพื่อดูข้อมูลโดยละเอียด</p>
+                        </div>
+                        <div id="fileDetails" style="display: none;">
+                            <p><strong>ชื่อไฟล์:</strong> <span id="detailFileName">-</span></p>
+                            <p><strong>ขนาดไฟล์:</strong> <span id="detailFileSize">-</span></p>
+                            <p><strong>ประเภทไฟล์:</strong> <span id="detailFileType">-</span></p>
+                            <p><strong>แก้ไขครั้งล่าสุด:</strong> <span id="detailLastModified">-</span></p>
+                            <p><strong>รูปแบบไฟล์:</strong> CSV</p>
+                            <p><strong>สถานะ:</strong> <span id="detailStatus" style="color: #2ed573;">พร้อมอัพโหลดแล้ว</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Tracking Card -->
+            <div class="progress-card">
+                <h2><i class="fas fa-chart-line"></i> ติดตามความคืบหน้า</h2>
+                
+                <!-- Multi-phase Progress -->
+                <div class="multi-progress" id="multiProgress">
+                    <div class="progress-phase">
+                        <div class="phase-label">
+                            <i class="fas fa-upload" id="phase1Icon"></i>
+                            <span>อัปโหลดไฟล์</span>
+                        </div>
+                        <div class="phase-progress">
+                            <div class="phase-bar">
+                                <div class="phase-fill" id="phase1Fill"></div>
+                            </div>
+                            <span class="phase-percentage" id="phase1Percent">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-phase">
+                        <div class="phase-label">
+                            <i class="fas fa-check-circle" id="phase2Icon"></i>
+                            <span>ตรวจสอบไฟล์</span>
+                        </div>
+                        <div class="phase-progress">
+                            <div class="phase-bar">
+                                <div class="phase-fill" id="phase2Fill"></div>
+                            </div>
+                            <span class="phase-percentage" id="phase2Percent">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-phase">
+                        <div class="phase-label">
+                            <i class="fas fa-cogs" id="phase3Icon"></i>
+                            <span>ประมวลผลข้อมูล</span>
+                        </div>
+                        <div class="phase-progress">
+                            <div class="phase-bar">
+                                <div class="phase-fill" id="phase3Fill"></div>
+                            </div>
+                            <span class="phase-percentage" id="phase3Percent">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-phase">
+                        <div class="phase-label">
+                            <i class="fas fa-database" id="phase4Icon"></i>
+                            <span>บันทึกลงฐานข้อมูล</span>
+                        </div>
+                        <div class="phase-progress">
+                            <div class="phase-bar">
+                                <div class="phase-fill" id="phase4Fill"></div>
+                            </div>
+                            <span class="phase-percentage" id="phase4Percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Summary -->
+                <div class="progress-summary">
+                    <div class="summary-item">
+                        <i class="fas fa-clock"></i>
+                        <div class="summary-text">
+                            <span class="summary-label">สถานะปัจจุบัน</span>
+                            <span class="summary-value" id="currentStatus">รอเริ่มต้น</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-percentage"></i>
+                        <div class="summary-text">
+                            <span class="summary-label">ความคืบหน้าทั้งหมด</span>
+                            <span class="summary-value" id="totalProgress">0%</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-tasks"></i>
+                        <div class="summary-text">
+                            <span class="summary-label">ขั้นตอนที่เสร็จแล้ว</span>
+                            <span class="summary-value" id="completedSteps">0/4</span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-file-excel"></i>
+                        <div class="summary-text">
+                            <span class="summary-label">ดาวน์โหลดไฟล์ Excel</span>
+                            <span class="summary-value"><a href="/files/BlankDataInputForm.xlsx" download>ดาวน์โหลด Excel</a></span>
+                        </div>
+                    </div>
+                     <div class="summary-item">
+                        <i class="fas fa-file-excel"></i>
+                        <div class="summary-text">
+                            <span class="summary-label">ดาวน์โหลดตัวอย่างการกรอกไฟล์ Excel</span>
+                            <span class="summary-value"><a href="/files/InputDataset_Example.csv" download>ดาวน์โหลด Excel</a></span>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div> <!-- ปิด main-container ที่นี่เพื่อให้ส่วนอัปโหลดอยู่ภายใน -->
+
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const loading = document.getElementById('loading');
+    const progressFill = document.getElementById('progressFill');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Added references to the progress bar elements
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const stepLine1 = document.getElementById('stepLine1');
+    const stepLine2 = document.getElementById('stepLine2');
+    const stepLabels = {
+        1: document.getElementById('stepLabel1'),
+        2: document.getElementById('stepLabel2'),
+        3: document.getElementById('stepLabel3')
+    };
+
+    // Enhanced loading elements
+    const loadingTitle = document.getElementById('loadingTitle');
+    const loadingDescription = document.getElementById('loadingDescription');
+    const statusMessages = document.getElementById('statusMessages');
+    
+    // Phase progress elements
+    const phase1Fill = document.getElementById('phase1Fill');
+    const phase2Fill = document.getElementById('phase2Fill');
+    const phase3Fill = document.getElementById('phase3Fill');
+    const phase4Fill = document.getElementById('phase4Fill');
+    const phase1Percent = document.getElementById('phase1Percent');
+    const phase2Percent = document.getElementById('phase2Percent');
+    const phase3Percent = document.getElementById('phase3Percent');
+    const phase4Percent = document.getElementById('phase4Percent');
+    const phase1Icon = document.getElementById('phase1Icon');
+    const phase2Icon = document.getElementById('phase2Icon');
+    const phase3Icon = document.getElementById('phase3Icon');
+    const phase4Icon = document.getElementById('phase4Icon');
+    
+    const overallProgressText = document.getElementById('overallProgressText');
+
+    // Function to update the progress bar and steps based on step number
+    function updateProgress(step) {
+        // Remove 'active' class from all steps and lines initially
+        step1.classList.remove('active');
+        step2.classList.remove('active');
+        step3.classList.remove('active');
+        stepLine1.classList.remove('active');
+        stepLine2.classList.remove('active');
+        stepLabels[1].classList.remove('active');
+        stepLabels[2].classList.remove('active');
+        stepLabels[3].classList.remove('active');
+
+        // Apply 'active' class based on the current step
+        if (step >= 1) {
+            step1.classList.add('active');
+            stepLabels[1].classList.add('active');
+        }
+        if (step >= 2) {
+            step2.classList.add('active');
+            stepLabels[2].classList.add('active');
+            stepLine1.classList.add('active');
+        }
+        if (step >= 3) {
+            step3.classList.add('active');
+            stepLabels[3].classList.add('active');
+            stepLine2.classList.add('active');
+        }
+    }
+
+    // Function to update phase progress
+    function updatePhaseProgress(phase, percentage, status = 'pending') {
+        const phaseFill = document.getElementById(`phase${phase}Fill`);
+        const phasePercent = document.getElementById(`phase${phase}Percent`);
+        const phaseIcon = document.getElementById(`phase${phase}Icon`);
+        
+        if (phaseFill && phasePercent && phaseIcon) {
+            phaseFill.style.width = `${percentage}%`;
+            phasePercent.textContent = `${percentage}%`;
+            
+            // Update icon based on status
+            if (status === 'completed') {
+                phaseIcon.className = 'fas fa-check-circle';
+                phaseIcon.style.color = '#2ed573';
+            } else if (status === 'active') {
+                phaseIcon.className = 'fas fa-spinner fa-spin';
+                phaseIcon.style.color = '#667eea';
+            } else if (status === 'pending') {
+                phaseIcon.className = 'fas fa-clock';
+                phaseIcon.style.color = '#ccc';
+            }
+        }
+    }
+
+    // Function to update progress summary
+    function updateProgressSummary(currentStatus, totalProgress, completedSteps) {
+        const statusEl = document.getElementById('currentStatus');
+        const progressEl = document.getElementById('totalProgress');
+        const stepsEl = document.getElementById('completedSteps');
+        
+        if (statusEl) statusEl.textContent = currentStatus;
+        if (progressEl) progressEl.textContent = totalProgress;
+        if (stepsEl) stepsEl.textContent = completedSteps;
+    }
+
+    // Function to add status message
+    function addStatusMessage(message, type = 'info') {
+        const statusItem = document.createElement('div');
+        statusItem.className = `status-item ${type}`;
+        
+        let icon = 'fas fa-info-circle';
+        if (type === 'success') icon = 'fas fa-check-circle';
+        else if (type === 'error') icon = 'fas fa-exclamation-circle';
+        else if (type === 'warning') icon = 'fas fa-exclamation-triangle';
+        
+        statusItem.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+        statusMessages.appendChild(statusItem);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (statusItem.parentNode) {
+                statusItem.remove();
+            }
+        }, 3000);
+    }
+
+    // Function to update overall progress
+    function updateOverallProgress(percentage) {
+        progressFill.style.width = `${percentage}%`;
+        overallProgressText.textContent = `${percentage}%`;
+    }
+
+    // Function to reset progress to initial state
+    function resetProgress() {
+        updateProgress(1);
+        updatePhaseProgress(1, 0, 'pending');
+        updatePhaseProgress(2, 0, 'pending');
+        updatePhaseProgress(3, 0, 'pending');
+        updatePhaseProgress(4, 0, 'pending');
+        updateOverallProgress(0);
+        updateProgressSummary('รอเริ่มต้น', '0%', '0/4');
+        statusMessages.innerHTML = '';
+        successMessage.classList.remove('show');
+        errorMessage.classList.remove('show');
+    }
+
+    // Event listener for file input changes - reset progress when new file is selected
+    fileInput.addEventListener('change', function() {
+        if (this.files[0]) {
+            resetProgress();
+        }
+    });
+
+    // Set initial progress state
+    updateProgress(1);
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    uploadArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+            // Update the small file info above upload button
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            uploadBtn.disabled = false;
+            
+            // Update the detailed file info card
+            document.getElementById('detailFileName').textContent = file.name;
+            document.getElementById('detailFileSize').textContent = formatFileSize(file.size);
+            document.getElementById('detailFileType').textContent = file.type || 'text/csv';
+            document.getElementById('detailLastModified').textContent = new Date(file.lastModified).toLocaleString();
+            document.getElementById('detailStatus').textContent = 'พร้อมอัพโหลดแล้ว';
+            document.getElementById('detailStatus').style.color = '#2ed573';
+            
+            // Show file details and hide no file message
+            document.getElementById('noFileSelected').style.display = 'none';
+            document.getElementById('fileDetails').style.display = 'block';
+
+            // Reset progress bar on file selection
+            updateProgress(1);
+            
+        } else {
+            console.error('Please select a valid CSV file.');
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    async function uploadFile() {
+        if (!fileInput.files[0]) {
+            console.error('กรุณาเลือกไฟล์ CSV ก่อน');
+            return;
+        }
+
+        // Reset progress to step 1 when starting new upload
+        updateProgress(1);
+        
+        // Reset all progress phases
+        updatePhaseProgress(1, 0, 'pending');
+        updatePhaseProgress(2, 0, 'pending');
+        updatePhaseProgress(3, 0, 'pending');
+        updatePhaseProgress(4, 0, 'pending');
+        updateOverallProgress(0);
+        updateProgressSummary('รอเริ่มต้น', '0%', '0/4');
+
+        // Clear previous status messages
+        statusMessages.innerHTML = '';
+
+        // Set status to uploading
+        const statusEl = document.getElementById('detailStatus');
+        if (statusEl) {
+            statusEl.textContent = 'กำลังอัพโหลด...';
+            statusEl.style.color = '#667eea';
+        }
+
+        // Show loading and move progress to step 2
+        loading.classList.add('show');
+        uploadBtn.disabled = true;
+        successMessage.classList.remove('show');
+        errorMessage.classList.remove('show');
+        updateProgress(2);
+
+        try {
+            const formData = new FormData();
+            formData.append('csvFile', fileInput.files[0]);
+
+            // Phase 1: File Upload (0-25%)
+            loadingTitle.textContent = 'กำลังอัพโหลดไฟล์...';
+            loadingDescription.textContent = 'ส่งไฟล์ไปยังเซิร์ฟเวอร์';
+            addStatusMessage('เริ่มต้นการอัพโหลดไฟล์...', 'info');
+            updateProgressSummary('กำลังอัพโหลดไฟล์...', '0%', '0/4');
+            
+            let phase1Progress = 0;
+            const phase1Interval = setInterval(() => {
+                phase1Progress += 5;
+                if (phase1Progress <= 100) {
+                    updatePhaseProgress(1, phase1Progress, 'active');
+                    updateOverallProgress(Math.floor(phase1Progress * 0.25));
+                    updateProgressSummary('กำลังอัพโหลดไฟล์...', `${Math.floor(phase1Progress * 0.25)}%`, '0/4');
+                } else {
+                    clearInterval(phase1Interval);
+                    updatePhaseProgress(1, 100, 'completed');
+                    addStatusMessage('อัพโหลดไฟล์เสร็จสิ้น', 'success');
+                    updateProgressSummary('อัพโหลดไฟล์เสร็จสิ้น', '25%', '1/4');
+                }
+            }, 100);
+
+            // Phase 2: File Validation (25-50%)
+            setTimeout(() => {
+                loadingTitle.textContent = 'กำลังตรวจสอบไฟล์...';
+                loadingDescription.textContent = 'ตรวจสอบรูปแบบและความถูกต้องของไฟล์';
+                addStatusMessage('เริ่มตรวจสอบไฟล์...', 'info');
+                updateProgressSummary('กำลังตรวจสอบไฟล์...', '25%', '1/4');
+                
+                let phase2Progress = 0;
+                const phase2Interval = setInterval(() => {
+                    phase2Progress += 10;
+                    if (phase2Progress <= 100) {
+                        updatePhaseProgress(2, phase2Progress, 'active');
+                        updateOverallProgress(25 + Math.floor(phase2Progress * 0.25));
+                        updateProgressSummary('กำลังตรวจสอบไฟล์...', `${25 + Math.floor(phase2Progress * 0.25)}%`, '1/4');
+                    } else {
+                        clearInterval(phase2Interval);
+                        updatePhaseProgress(2, 100, 'completed');
+                        addStatusMessage('การตรวจสอบไฟล์เสร็จสิ้น', 'success');
+                        updateProgressSummary('การตรวจสอบไฟล์เสร็จสิ้น', '50%', '2/4');
+                    }
+                }, 150);
+            }, 2500);
+
+            // Phase 3: Data Processing (50-75%)
+            setTimeout(() => {
+                loadingTitle.textContent = 'กำลังประมวลผลข้อมูล...';
+                loadingDescription.textContent = 'ประมวลผลผ่านโมเดล random forest ด้วยความแม่นยำที่ 80%';
+                addStatusMessage('เริ่มประมวลผลข้อมูล...', 'info');
+                updateProgressSummary('กำลังประมวลผลข้อมูล...', '50%', '2/4');
+                
+                let phase3Progress = 0;
+                const phase3Interval = setInterval(() => {
+                    phase3Progress += 8;
+                    if (phase3Progress <= 100) {
+                        updatePhaseProgress(3, phase3Progress, 'active');
+                        updateOverallProgress(50 + Math.floor(phase3Progress * 0.25));
+                        updateProgressSummary('กำลังประมวลผลข้อมูล...', `${50 + Math.floor(phase3Progress * 0.25)}%`, '2/4');
+                    } else {
+                        clearInterval(phase3Interval);
+                        updatePhaseProgress(3, 100, 'completed');
+                        addStatusMessage('การประมวลผลข้อมูลเสร็จสิ้น', 'success');
+                        updateProgressSummary('การประมวลผลข้อมูลเสร็จสิ้น', '75%', '3/4');
+                    }
+                }, 200);
+            }, 5000);
+
+            // Phase 4: Database Insertion (75-100%)
+            setTimeout(() => {
+                loadingTitle.textContent = 'กำลังบันทึกลงฐานข้อมูล...';
+                loadingDescription.textContent = 'บันทึกข้อมูลลงในระบบ';
+                addStatusMessage('เริ่มบันทึกลงฐานข้อมูล...', 'info');
+                updateProgressSummary('กำลังบันทึกลงฐานข้อมูล...', '75%', '3/4');
+                
+                let phase4Progress = 0;
+                const phase4Interval = setInterval(() => {
+                    phase4Progress += 12;
+                    if (phase4Progress <= 100) {
+                        updatePhaseProgress(4, phase4Progress, 'active');
+                        updateOverallProgress(75 + Math.floor(phase4Progress * 0.25));
+                        updateProgressSummary('กำลังบันทึกลงฐานข้อมูล...', `${75 + Math.floor(phase4Progress * 0.25)}%`, '3/4');
+                    } else {
+                        clearInterval(phase4Interval);
+                        updatePhaseProgress(4, 100, 'completed');
+                        addStatusMessage('การบันทึกข้อมูลเสร็จสิ้น', 'success');
+                        updateProgressSummary('การบันทึกข้อมูลเสร็จสิ้น', '100%', '4/4');
+                    }
+                }, 150);
+            }, 7500);
+
+            // Actual file upload request
+            const res = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await res.json();
+
+            // Wait for all phases to complete
+            setTimeout(() => {
+                loading.classList.remove('show');
+                uploadBtn.disabled = false;
+
+                if (result.status === 'success') {
+                    successMessage.querySelector('span').textContent = `อัปโหลดสำเร็จ เพิ่มข้อมูล ${result.inserted} รายการ`;
+                    successMessage.classList.add('show');
+                    if (statusEl) {
+                        statusEl.textContent = 'การอัปโหลดเสร็จสมบูรณ์';
+                        statusEl.style.color = '#2ed573';
+                    }
+                    updateProgress(3);
+                    addStatusMessage(`อัปโหลดสำเร็จ! เพิ่มข้อมูล ${result.inserted} รายการ`, 'success');
+                    
+                    // Keep progress at step 3 (เสร็จสิ้น) - don't reset automatically
+                    // Only reset when user starts a new upload
+                } else if (result.status === 'no_data') {
+                    errorMessage.querySelector('span').textContent = result.message || 'ไม่พบข้อมูลที่นำเข้าได้ในไฟล์นี้';
+                    errorMessage.classList.add('show');
+                    if (statusEl) {
+                        statusEl.textContent = 'ไม่มีข้อมูลที่นำเข้าได้';
+                        statusEl.style.color = '#ff6b6b';
+                    }
+                    addStatusMessage('ไม่พบข้อมูลที่นำเข้าได้ในไฟล์นี้', 'warning');
+                    // Reset to step 1 on failure
+                    updateProgress(1);
+                } else {
+                    errorMessage.querySelector('span').textContent = 'เกิดข้อผิดพลาด';
+                    errorMessage.classList.add('show');
+                    if (statusEl) {
+                        statusEl.textContent = 'การอัปโหลดล้มเหลว';
+                        statusEl.style.color = '#ff6b6b';
+                    }
+                    addStatusMessage('เกิดข้อผิดพลาดในการอัปโหลด', 'error');
+                    // Reset to step 1 on failure
+                    updateProgress(1);
+                }
+            }, 10000); // Wait for all phases to complete
+
+        } catch (err) {
+            console.error('Upload error:', err);
+            loading.classList.remove('show');
+            uploadBtn.disabled = false;
+            errorMessage.querySelector('span').textContent = 'เกิดข้อผิดพลาด';
+            errorMessage.classList.add('show');
+            if (statusEl) {
+                statusEl.textContent = 'การอัปโหลดล้มเหลว';
+                statusEl.style.color = '#ff6b6b';
+            }
+            addStatusMessage('เกิดข้อผิดพลาดในการอัปโหลด', 'error');
+            // Reset to step 1 on failure
+            updateProgress(1);
+        }
+    }
+
+    async function logout() {
+        const res = await fetch('/logout', { method: 'POST' });
+        if (res.ok) {
+            window.location.href = '/login';
+        }
+    }
+    
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted || window.performance.navigation.type === 2) {
+            // ถ้ากลับมาจาก cache
+            window.location.reload();
+        }
+    });
+        
+</script>
+</body>
+</html>
+

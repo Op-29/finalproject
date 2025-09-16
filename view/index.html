@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>map</title>
+    <link rel="stylesheet" href="/css/index.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.16.1/mapbox-gl.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1 class="ceiheader">
+            ข้อมูลความเสี่ยงการฆ่าตัวตายในเชียงราย
+        </h1>
+        <div class="top-buttons">
+            <button class="top-buttons-information" onclick="window.location.href='/upload'">จัดการข้อมูล</button>
+            <button class="top-buttons-information logout" onclick="logout()">ออกจากระบบ</button>
+        </div>
+    </header>
+
+
+    <div class="container">
+
+        <div class="sidebar">
+
+
+            <div class="info-box">
+                <div class="info-box-person">
+                    <p id="summary">กำลังโหลดข้อมูล...</p>
+                    <h3>จำนวนเหตุ<br><strong id="total-events">-</strong></h3>
+                </div>
+                <div id="detail-summary"></div>
+            </div>
+
+
+
+            <form class="selectors" id="filterForm">
+                <label for="year" class="all-label">ปี</label>
+                <select id="year" name="year">
+                </select>
+
+                <label for="month" class="all-label">เดือน</label>
+                <select id="month" name="month">
+
+                </select>
+
+                <label for="date" class="all-label">วัน</label>
+                <select id="date" name="date">
+
+                </select>
+
+                <label for="district" class="all-label">อำเภอ</label>
+                <select id="district" name="district">
+                    <option>อำเภอ</option>
+                </select>
+
+                <label for="subdistrict" class="all-label">ตำบล</label>
+                <select id="subdistrict" name="subdistrict">
+                    <option>ตำบล</option>
+                </select>
+
+
+
+                <div style="width: 100%; margin-top: 10px;">
+                    <b>รายได้</b>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="income" value="ไม่มีรายได้" />ไม่มีรายได้</label>
+                        <label><input type="checkbox" name="income" value="รายได้น้อย" />น้อย</label>
+                        <label><input type="checkbox" name="income" value="รายได้น้อยมาก" />น้อยมาก</label>
+                        <label><input type="checkbox" name="income" value="รายได้ปานกลาง" />ปานกลาง</label>
+                        <label><input type="checkbox" name="income"
+                                value="รายได้ปานกลางค่อนสูง" />ปานกลางค่อนสูง</label>
+                        <label><input type="checkbox" name="income" value="รายได้สูง" />สูง</label>
+                        <label><input type="checkbox" name="income" value="รายได้สูงมาก" />สูงมาก</label>
+                    </div>
+                </div>
+
+                <div style="width: 100%; margin-top: 10px;">
+                    <b>อายุ</b>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="ageGroups" value="ผู้สูงอายุ" />ผู้สูงอายุ</label>
+                        <label><input type="checkbox" name="ageGroups" value="ผู้ใหญ่ตอนกลาง" />ผู้ใหญ่ตอนกลาง</label>
+                        <label><input type="checkbox" name="ageGroups" value="วัยรุ่น" />วัยรุ่น</label>
+                        <label><input type="checkbox" name="ageGroups" value="เด็ก" />เด็ก</label>
+                    </div>
+                </div>
+
+                <div style="width: 100%; margin-top: 10px;">
+                    <b>เพศ</b>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="gender" value="ชาย" />ชาย</label>
+                        <label><input type="checkbox" name="gender" value="หญิง" />หญิง</label>
+                    </div>
+                </div>
+
+                <div style="width: 100%; margin-top: 10px;">
+                    <b>ฤดู</b>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="season" value="ฤดูร้อน" /> ฤดูร้อน</label>
+                        <label><input type="checkbox" name="season" value="ฤดูหนาว" /> ฤดูหนาว</label>
+                        <label><input type="checkbox" name="season" value="ฤดูฝน" /> ฤดูฝน</label>
+                    </div>
+                </div>
+
+            </form>
+            <div class="button-container">
+                <div>
+                    <button id="map-button" onclick="window.location.href='/index'">แผนที่</button>
+                </div>
+                <div>
+                    <button id="graph-button" onclick="window.location.href='/chart'">กราฟ</button>
+                </div>
+                <div>
+                    <button id="table-button" onclick="window.location.href='/table'">ตาราง</button>
+                </div>
+            </div>
+
+
+
+
+        </div>
+
+        <div id="map"></div>
+
+        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+        <script>
+            const map = L.map('map').setView([19.9, 99.8], 9);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // normalize function: trim space และ invisible char
+            function normalizeName(name) {
+                return name ? name.trim() : '';
+            }
+            let currentLevel = 'district';
+            let currentDistrict = null;
+            const levelControl = L.control({ position: 'topright' });
+
+            levelControl.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'level-control');
+                div.style.background = 'white';
+                div.style.padding = '6px';
+                div.style.borderRadius = '4px';
+                div.style.cursor = 'pointer';
+                div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                div.innerHTML = '<b>ระดับ: อำเภอ</b>';
+
+                div.onclick = function () {
+                    if (currentLevel === 'subdistrict') {
+                        // กลับไปอำเภอ
+                        loadInitialData();
+                    }
+                };
+
+                return div;
+            };
+
+
+
+            const legend = L.control({ position: 'bottomleft' });
+
+            legend.onAdd = function (map) {
+
+                const detail = L.DomUtil.create('detail', 'legend');
+                detail.innerHTML = `
+                <b>ระดับความเสี่ยง</b><br>
+                <i style="background:#e74c3c"></i> เฝ้าระวังสูง<br>
+                <i style="background:#f39c12"></i> เฝ้าระวังกลาง<br>
+                <i style="background:#16a085"></i> เฝ้าระวังต่ำ<br>
+                <i style="background:#bdc3c7"></i> ไม่ระบุ<br>
+                                                            `;
+                return detail;
+            };
+            legend.addTo(map);
+            levelControl.addTo(map);
+            //-----------------------------------------------------select years---------------------------------------
+            async function loadYearOptions(filter) {
+                let url = 'http://localhost:3000/api/options/year';
+                const params = [];
+                if (filter.month) params.push(`month=${encodeURIComponent(filter.month)}`);
+                if (filter.day) params.push(`day=${encodeURIComponent(filter.day)}`);
+                if (params.length) url += '?' + params.join('&');
+
+                const res = await fetch(url);
+                const years = await res.json();
+                const select = document.getElementById('year');
+                const oldValue = select.value;
+
+                select.innerHTML = '<option value="">ปี</option>';
+                years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    select.appendChild(option);
+                });
+
+                if (oldValue && years.includes(parseInt(oldValue))) select.value = oldValue;
+                else select.value = '';
+            }
+
+            //-----------------------------------------------------select month---------------------------------------
+            async function loadMonthOptions(filter) {
+                let url = 'http://localhost:3000/api/options/month';
+                const params = [];
+                if (filter.year) params.push(`year=${encodeURIComponent(filter.year)}`);
+                if (filter.day) params.push(`day=${encodeURIComponent(filter.day)}`);
+                if (params.length) url += '?' + params.join('&');
+
+                const res = await fetch(url);
+                const months = await res.json();
+                const select = document.getElementById('month');
+                const oldValue = select.value;
+
+                select.innerHTML = '<option value="">เดือน</option>';
+                const monthMap = {
+                    1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน',
+                    5: 'พฤษภาคม', 6: 'มิถุนายน', 7: 'กรกฎาคม', 8: 'สิงหาคม',
+                    9: 'กันยายน', 10: 'ตุลาคม', 11: 'พฤศจิกายน', 12: 'ธันวาคม'
+                };
+                months.forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = m;
+                    option.textContent = monthMap[m];
+                    select.appendChild(option);
+                });
+
+                if (oldValue && months.includes(parseInt(oldValue))) select.value = oldValue;
+                else select.value = '';
+            }
+
+
+
+
+            //-----------------------------------------------------select date---------------------------------------
+            async function loadDayOptions(filter) {
+                let url = 'http://localhost:3000/api/options/day';
+                const params = [];
+                if (filter.year) params.push(`year=${encodeURIComponent(filter.year)}`);
+                if (filter.month) params.push(`month=${encodeURIComponent(filter.month)}`);
+                if (params.length) url += '?' + params.join('&');
+
+                const res = await fetch(url);
+                const days = await res.json();
+                const select = document.getElementById('date');
+                const oldValue = select.value;
+
+                select.innerHTML = '<option value="">วัน</option>';
+                days.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d;
+                    option.textContent = d;
+                    select.appendChild(option);
+                });
+
+                if (oldValue && days.includes(parseInt(oldValue))) select.value = oldValue;
+                else select.value = '';
+            }
+
+
+            //-----------------------------------------------------select district---------------------------------------
+
+            async function loadDistrictOptions() {
+                try {
+                    const res = await fetch('http://localhost:3000/api/options/district');
+                    const districts = await res.json();
+
+                    const select = document.getElementById('district');
+                    const oldValue = select.value; // จำค่าเดิม
+
+                    select.innerHTML = '<option value="none">อำเภอ</option>';
+
+                    districts.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        select.appendChild(option);
+                    });
+
+                    if (oldValue && districts.includes(oldValue)) {
+                        select.value = oldValue;
+                        document.getElementById('subdistrict').disabled = false;
+                    } else {
+                        select.value = 'none';
+                        const sub = document.getElementById('subdistrict');
+                        sub.innerHTML = '<option value="none">ตำบล</option>';
+                        sub.disabled = true;
+                    }
+                } catch (err) {
+                    console.error('โหลดอำเภอไม่สำเร็จ:', err);
+                }
+            }
+
+
+            // โหลดตำบล เมื่อเลือกอำเภอ
+            document.getElementById('district').addEventListener('change', async (e) => {
+                const districtName = e.target.value;
+
+                if (!districtName || districtName === 'อำเภอ' || districtName === 'none') {
+                    document.getElementById('subdistrict').innerHTML = '<option value="none">ตำบล</option>';
+                    document.getElementById('subdistrict').disabled = true; // ✅ ปิด
+                    updateMap();
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`http://localhost:3000/api/options/subdistrict?districtName=${encodeURIComponent(districtName)}`);
+                    const data = await res.json();
+
+                    const select = document.getElementById('subdistrict');
+                    select.innerHTML = '<option value="">ตำบล</option>';
+
+                    data.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        select.appendChild(option);
+                    });
+
+                    select.disabled = false; // ✅ เปิดใช้งานตำบลหลังโหลดเสร็จ
+
+                    updateMap();
+                } catch (err) {
+                    console.error('โหลดตำบลไม่สำเร็จ:', err);
+                }
+            });
+
+            async function zoomToSubdistrict(districtName, subdistrictName) {
+                const payload = {
+                    districtName,
+                    incomeLevels: [...document.querySelectorAll('input[name="income"]:checked')].map(cb => cb.value),
+                    genders: [...document.querySelectorAll('input[name="gender"]:checked')].map(cb => cb.value),
+                    ageGroups: [...document.querySelectorAll('input[name="ageGroups"]:checked')].map(cb => cb.value),
+                    seasons: [...document.querySelectorAll('input[name="season"]:checked')].map(cb => cb.value),
+                };
+
+                const year = document.getElementById('year').value;
+                const month = document.getElementById('month').value;
+                const date = document.getElementById('date').value;
+                if (year) payload.year = parseInt(year);
+                if (month) payload.month = parseInt(month);
+                if (date) payload.date = parseInt(date);
+
+                const res = await fetch(`http://localhost:3000/subdistrict-map-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (!window.geoLayer) {
+                    window.geoLayer = L.layerGroup().addTo(map);
+                } else {
+                    window.geoLayer.clearLayers();
+                }
+
+
+                window.geoLayer = L.geoJSON(data.features, {
+                    style: feature => {
+                        const subdistrict = normalizeName(feature.properties.tam_th);
+                        const risk = data.riskBySubdistrict[subdistrict] || 'ไม่ระบุ';
+                        return {
+                            fillColor: getColor(risk),
+                            weight: 1,
+                            color: 'white',
+                            fillOpacity: 0.6
+                        };
+                    },
+                    onEachFeature: (feature, layer) => {
+                        const subdistrict = normalizeName(feature.properties.tam_th);
+                        const risk = data.riskBySubdistrict[subdistrict] || 'ไม่ระบุ';
+                        const counts = data.subdistrictStats?.[subdistrict];
+                        const detail = counts ? `<br>ต่ำ: ${counts.low} กลาง: ${counts.medium} สูง: ${counts.high}` : '';
+                        layer.bindPopup(`<b>ตำบล:</b> ${subdistrict}<br><b>ระดับ:</b> ${risk}${detail}`);
+
+                        // ✅ ซูมเฉพาะตำบลที่เลือก
+                        if (subdistrict === normalizeName(subdistrictName)) {
+                            const bounds = layer.getBounds();
+                            map.fitBounds(bounds);
+                            // layer.openPopup();
+                        }
+                    }
+                }).addTo(map);
+
+                levelControl.getContainer().innerHTML = `<b>ระดับ: ตำบล (${districtName})</b>`;
+                currentLevel = 'subdistrict';
+                currentDistrict = districtName;
+            }
+
+            // เพิ่ม event ให้ subdistrict ด้วย
+            document.getElementById('subdistrict').addEventListener('change', async () => {
+                const district = document.getElementById('district').value;
+                const subdistrict = document.getElementById('subdistrict').value;
+                if (district && subdistrict) {
+                    await zoomToSubdistrict(district, subdistrict);
+                } else {
+                    updateMap(); // fallback ธรรมดา
+                }
+            });
+
+            async function updateDateDropdowns() {
+                const filter = {
+                    year: document.getElementById('year').value || null,
+                    month: document.getElementById('month').value || null,
+                    day: document.getElementById('date').value || null
+                };
+
+                // เรียกโหลด dropdown ทั้ง 3 ตัวพร้อมกัน
+                await Promise.all([
+                    loadYearOptions(filter),
+                    loadMonthOptions(filter),
+                    loadDayOptions(filter),
+                    loadDistrictOptions()
+                ]);
+
+                // โหลดแผนที่หรือข้อมูลอื่น ๆ ตาม filter ที่อัปเดต
+                updateMap();
+            }
+            ['year', 'month', 'date'].forEach(id => {
+                const el = document.getElementById(id);
+                el.addEventListener('change', () => {
+                    updateDateDropdowns();
+                });
+            });
+
+
+
+
+            window.addEventListener('DOMContentLoaded', () => {
+                // เรียก load dropdown ครั้งแรก
+                updateDateDropdowns();
+
+                // เพิ่ม listener ให้ dropdown ทั้ง 3
+                ['year', 'month', 'date'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('change', () => {
+                            updateDateDropdowns();
+                        });
+                    }
+                });
+            });
+
+
+
+
+
+
+            //----------------------------------------------load map -------------------------------------------------------
+            async function loadInitialData() {
+                const res = await fetch('http://localhost:3000/map-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const data = await res.json();
+                console.log('Initial load:', data);
+
+                currentLevel = 'district';
+                currentDistrict = null;
+                levelControl.getContainer().innerHTML = '<b>ระดับ: อำเภอ</b>';
+
+                drawGeoLayer(data);
+            }
+
+            //------------------------------------------------check box--------------------------------------------------------------------
+            const filterInputs = document.querySelectorAll('input[name="income"], input[name="gender"], input[name="ageGroups"], input[name="season"]');
+
+            async function updateMap() {
+                const payload = {};
+
+                const incomeLevels = [...document.querySelectorAll('input[name="income"]:checked')].map(cb => cb.value);
+                const genders = [...document.querySelectorAll('input[name="gender"]:checked')].map(cb => cb.value);
+                const ageGroups = [...document.querySelectorAll('input[name="ageGroups"]:checked')].map(cb => cb.value);
+                const seasons = [...document.querySelectorAll('input[name="season"]:checked')].map(cb => cb.value);
+
+                payload.incomeLevels = incomeLevels;
+                payload.genders = genders;
+                payload.ageGroups = ageGroups;
+                payload.seasons = seasons;
+
+                const year = document.getElementById('year').value;
+                const month = document.getElementById('month').value;
+                const date = document.getElementById('date').value;
+                const district = document.getElementById('district').value;
+                const subdistrict = document.getElementById('subdistrict').value;
+                if (year) payload.year = parseInt(year);
+                if (month) payload.month = parseInt(month);
+                if (date) payload.date = parseInt(date);
+                if (district) payload.district = district;
+                if (subdistrict) payload.subdistrict = subdistrict;
+                console.log('Payload:', payload);
+
+                try {
+                    const res = await fetch('http://localhost:3000/map-data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await res.json();
+                    console.log('Filter changed:', data);
+
+                    drawGeoLayer(data);
+                } catch (error) {
+                    console.error('Error fetching map data:', error);
+                }
+            }
+
+            document.getElementById('district').addEventListener('change', async (e) => {
+                const districtName = e.target.value;
+                const res = await fetch(`http://localhost:3000/api/options/subdistrict?districtName=${encodeURIComponent(districtName)}`);
+                const data = await res.json();
+                const select = document.getElementById('subdistrict');
+
+                select.innerHTML = `<option value="">ตำบล</option>`;
+                data.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
+                });
+            });
+            // เพิ่ม event change ให้ checkbox + select
+            filterInputs.forEach(input => {
+                input.addEventListener('change', updateMap);
+            });
+
+
+
+            function drawGeoLayer(data) {
+                if (!window.geoLayer) {
+                    window.geoLayer = L.layerGroup().addTo(map);
+                } else {
+                    window.geoLayer.clearLayers();
+                }
+
+
+                console.log('District keys:', Object.keys(data.riskByDistrict));
+
+                window.geoLayer = L.geoJSON(data.geojson, {
+                    style: feature => {
+                        const district = normalizeName(feature.properties.amp_th);
+                        const risk = data.riskByDistrict[district] || 'ไม่ระบุ';
+                        console.log(`District: ${district}, Risk: ${risk}`);
+
+                        return {
+                            fillColor: getColor(risk),
+                            weight: 2,
+                            color: 'white',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: (feature, layer) => {
+                        const district = normalizeName(feature.properties.amp_th);
+                        const risk = data.riskByDistrict[district] || 'ไม่ระบุ';
+
+                        const counts = data.districtStats ? data.districtStats[district] : null; // ✅ ต้องมีบรรทัดนี้ก่อนใช้
+                        const detail = counts ? `<br>ต่ำ : ${counts.low} กลาง : ${counts.medium} สูง : ${counts.high}` : '';
+
+                        layer.bindPopup(`<b>อำเภอ:</b> ${district}<br><b>ระดับ : </b> ${risk}${detail}`);
+                        layer.on('mouseover', function (e) {
+                            this.openPopup();
+                            // เพิ่ม cursor pointer ถ้าชอบ
+                            this._path.style.cursor = 'pointer';
+                        });
+                        // หรือ ถ้าไม่ใช้ปุ่ม ใช้ click ทั้ง layer เลย:
+                        layer.on('click', () => {
+                            currentLevel = 'subdistrict';
+                            currentDistrict = district;
+                            loadSubdistrict(district);
+
+                            const bounds = layer.getBounds();
+                            map.fitBounds(bounds); // Zoom เข้าไปอำเภอ
+                        });
+
+
+                        async function loadSubdistrict(districtName) {
+                            console.log('โหลดตำบลของ:', districtName);
+
+                            // 👇 สร้าง payload จาก checkbox และ dropdown
+                            const incomeLevels = [...document.querySelectorAll('input[name="income"]:checked')].map(cb => cb.value);
+                            const genders = [...document.querySelectorAll('input[name="gender"]:checked')].map(cb => cb.value);
+                            const ageGroups = [...document.querySelectorAll('input[name="ageGroups"]:checked')].map(cb => cb.value);
+                            const seasons = [...document.querySelectorAll('input[name="season"]:checked')].map(cb => cb.value);
+
+                            const year = document.getElementById('year').value;
+                            const month = document.getElementById('month').value;
+                            const date = document.getElementById('date').value;
+
+                            const payload = {
+                                districtName,
+                                incomeLevels,
+                                genders,
+                                ageGroups,
+                                seasons,
+                            };
+
+                            if (year) payload.year = parseInt(year);
+                            if (month) payload.month = parseInt(month);
+                            if (date) payload.date = parseInt(date);
+
+                            const res = await fetch(`http://localhost:3000/subdistrict-map-data`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            const data = await res.json();
+
+                            if (!window.geoLayer) {
+                                window.geoLayer = L.layerGroup().addTo(map);
+                            } else {
+                                window.geoLayer.clearLayers();
+                            }
+
+                            window.geoLayer = L.geoJSON(data.features, {
+                                style: feature => {
+                                    const subdistrictName = normalizeName(feature.properties.tam_th);
+                                    const risk = data.riskBySubdistrict[subdistrictName] || 'ไม่ระบุ';
+
+                                    return {
+                                        fillColor: getColor(risk),
+                                        weight: 1,
+                                        color: 'white',
+                                        fillOpacity: 0.6
+                                    };
+                                },
+                                onEachFeature: (feature, layer) => {
+                                    const subdistrictName = normalizeName(feature.properties.tam_th);
+                                    const risk = data.riskBySubdistrict[subdistrictName] || 'ไม่ระบุ';
+                                    const counts = data.subdistrictStats ? data.subdistrictStats[subdistrictName] : null;
+                                    const detail = counts ? `<br>ต่ำ: ${counts.low} กลาง: ${counts.medium} สูง: ${counts.high}` : '';
+
+                                    layer.bindPopup(`<b>ตำบล:</b> ${subdistrictName}<br><b>ระดับ:</b> ${risk}${detail}`);
+                                }
+                            }).addTo(map);
+
+                            const bounds = window.geoLayer.getBounds();
+                            map.fitBounds(bounds);
+
+                            currentLevel = 'subdistrict';
+                            currentDistrict = districtName;
+                            levelControl.getContainer().innerHTML = `<b>ระดับ: ตำบล (${districtName})</b>`;
+                        }
+
+
+
+                    }
+
+                }).addTo(map);
+                // Update sidebar summary
+                document.getElementById('summary').innerText = `เฝ้าระวังต่ำ : ${data.total.low}\nเฝ้าระวังปานกลาง : ${data.total.medium}\nเฝ้าระวังสูง : ${data.total.high}`;
+                document.getElementById('total-events').innerText =
+                    data.total.low + data.total.medium + data.total.high;
+            }
+            function getColor(risk) {
+                if (risk === 'เฝ้าระวังสูง') return '#e74c3c';
+                if (risk === 'เฝ้าระวังกลาง') return '#f39c12';
+                if (risk === 'เฝ้าระวังต่ำ') return '#16a085';
+                return '#bdc3c7';
+            }
+
+
+            // โหลดรอบแรก
+            loadInitialData();
+            async function logout() {
+                const res = await fetch('/logout', { method: 'POST' });
+                if (res.ok) {
+                    window.location.href = '/login';
+                }
+            }
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted || window.performance.navigation.type === 2) {
+                    // ถ้ากลับมาจาก cache
+                    window.location.reload();
+                }
+            });
+        </script>
+
+    </div>
+
+</body>
+
+</html>

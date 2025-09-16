@@ -1,0 +1,31 @@
+/* Table-specific styles only */
+
+
+.risk-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.risk-table th, .risk-table td {
+    border: 1px solid #ddd;
+    padding: 12px 15px;
+    text-align: left;
+}
+
+.risk-table th {
+    background-color: #8bb57b;
+    color: white;
+    font-weight: bold;
+}
+
+.risk-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.risk-table tbody tr:hover {
+    background-color: #f0f0f0;
+}
